@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mlops-airflow-webserver-deployment
+  labels:
+    app: mlops-airflow-webserver-deployment
+spec:
+  selector:
+    matchLabels:
+      app: mlops-airflow-webserver-deployment
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: mlops-airflow-webserver-deployment
+    spec:
+      volumes:
+        - name: mlops-airflow-reqs-configmap
+          configMap:
+            name: mlops-airflow-reqs-configmap
+        - name: dags-host-volume
+          hostPath:
+            path: /mnt/airflow/dags
+            type: Directory
+        - name: mlops-airflow-logs-pvc
+          persistentVolumeClaim:
+            claimName: mlops-airflow-logs-pvc
+      containers:
+        - name: airflow-webserver
+          image: puckel/docker-airflow:1.10.9
+          envFrom:
+            - configMapRef:
+                name: mlops-airflow-envvars-configmap
+          resources:
+            limits:
+              memory: "2Gi"
+          ports:
+            - containerPort: 8080
+          volumeMounts:
+            - name: mlops-airflow-reqs-configmap
+              subPath: "requirements.txt"
+              mountPath: "/requirements.txt"
+            - name: dags-host-volume
+              mountPath: /usr/local/airflow/dags
+            - name: mlops-airflow-logs-pvc
+              mountPath: /usr/local/airflow/logs

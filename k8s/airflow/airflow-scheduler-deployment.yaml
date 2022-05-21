@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mlops-airflow-scheduler
+  labels:
+    app: airflow-k8s
+spec:
+  selector:
+    matchLabels:
+      app: mlops-airflow-scheduler
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: mlops-airflow-scheduler
+    spec:
+      volumes:
+        - name: mlops-airflow-reqs-configmap
+          configMap:
+            name: mlops-airflow-reqs-configmap
+        - name: dags-host-volume
+          hostPath:
+            path: /mnt/airflow/dags
+            type: Directory
+        - name: mlops-airflow-logs-pvc
+          persistentVolumeClaim:
+            claimName: mlops-airflow-logs-pvc
+      containers:
+      - name: airflow-scheduler
+        image: puckel/docker-airflow:1.10.9
+        args: ["scheduler"]
+        envFrom:
+          - configMapRef:
+              name: airflow-envvars-configmap
+        resources:
+          limits:
+            memory: "512Mi"
+        volumeMounts:
+          - name: mlops-airflow-reqs-configmap
+            subPath: "requirements.txt"
+            mountPath: "/requirements.txt"
+          - name: dags-host-volume
+            mountPath: /usr/local/airflow/dags
+          - name: mlops-airflow-logs-pvc
+            mountPath: /usr/local/airflow/logs
